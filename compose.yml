@@ -1,0 +1,65 @@
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    volumes:
+      - ./hass-config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    env_file:
+      - env/home_assistant.env
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: "koenkk/zigbee2mqtt"
+    restart: unless-stopped
+    volumes:
+      - ./zigbee2mqtt-data:/app/data
+      - /run/udev:/run/udev:ro
+    network_mode: host
+    devices: 
+      - /dev/serial/by-id/usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II_DE2434495-if00:/dev/ttyACM0
+
+  wyoming-piper:
+    image: rhasspy/wyoming-piper
+    container_name: wyoming_piper
+    ports:
+      - "10200:10200"
+    volumes:
+      - ./piper:/data
+    command: --voice en_US-lessac-medium
+  
+  wyoming-whisper:
+    image: rhasspy/wyoming-whisper
+    container_name: wyoming_whisper
+    ports:
+      - "10300:10300"
+    volumes:
+      - ./whisper:/data
+    command: --model tiny-int8 --language en
+    tty: true
+
+  wyoming-openwakeword:
+    image: rhasspy/wyoming-openwakeword
+    container_name: wyoming_openwakeword
+    ports:
+      - "10400:10400"
+    command: --preload-model 'ok_nabu'
+    tty: true
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
